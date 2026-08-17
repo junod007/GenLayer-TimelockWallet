@@ -1,7 +1,6 @@
-# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+# {"Depends": "py-genlayer:j1b45ae8ynh2a9c9xn3b7qqh8m5q93hfwp7jqmwsfh8jpz09h6"}
 
 from genlayer import *
-
 
 class GenLayerTimelockWallet(gl.Contract):
     owner: Address
@@ -16,8 +15,8 @@ class GenLayerTimelockWallet(gl.Contract):
         self.message = "Wallet is locked"
 
     @gl.public.view
-    def get_owner(self) -> str:
-        return self.owner.as_hex
+    def get_owner(self) -> Address:
+    return self.owner
 
     @gl.public.view
     def get_unlock_time(self) -> u256:
@@ -28,12 +27,18 @@ class GenLayerTimelockWallet(gl.Contract):
         return self.locked
 
     @gl.public.view
-    def get_status(self) -> str:
+    def get_message(self) -> str:
         return self.message
 
     @gl.public.write
-    def update_message(self, new_message: str) -> None:
+    def unlock(self):
         if gl.message.sender_address != self.owner:
-            raise gl.vm.UserError("Only the owner can update the wallet")
+            raise Exception("Only the owner can unlock this wallet")
 
-        self.message = new_message
+        if not self.locked:
+            raise Exception("Wallet is already unlocked")
+
+        self.locked = False
+        self.message = "Wallet has been unlocked"
+
+
