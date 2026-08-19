@@ -1,66 +1,30 @@
 # AI Milestone Escrow
 
-A milestone review smart contract built on GenLayer.
+An AI-powered milestone review smart contract built on GenLayer.
 
 ## Overview
 
-AI Milestone Escrow is a smart contract designed to manage
-milestone-based agreements and supporting evidence.
+AI Milestone Escrow allows a client to define a project milestone requirement and submit evidence of completed work.
 
-The contract allows a client to define a milestone requirement
-when deploying the contract.
+The submitted evidence consists of:
 
-Evidence can later be submitted by providing:
-
-- A README or project documentation URL
+- A README/documentation URL
 - A source code URL
 
-The contract stores the submitted evidence on-chain and maintains
-the current milestone status.
-
-## Features
-
-- Define a client name
-- Define a milestone requirement
-- Submit README evidence URL
-- Submit source code evidence URL
-- Store milestone status
-- Approve the milestone
-
-## Smart Contract
-
-The contract includes the following public methods:
-
-### Read Methods
-
-- `get_client_name()`
-- `get_milestone()`
-- `get_readme_url()`
-- `get_source_code_url()`
-- `get_status()`
-
-### Write Methods
-
-- `submit_evidence(readme_url, source_code_url)`
-- `approve()`
+The contract fetches both pieces of evidence from the web and uses GenLayer's AI capabilities to evaluate whether the submitted project satisfies the defined milestone requirement.
 
 ## Workflow
 
-1. Deploy the contract with a client name and milestone requirement.
-2. Submit documentation and source code evidence.
-3. Review the submitted evidence.
-4. Approve the milestone.
-5. Check the current status.
+1. Deploy the `MilestoneReviewer` contract with:
 
-## Built With
+   - Client name
+   - Milestone requirement
 
-- Python
-- GenLayer
-- GenLayer Studio
+2. Submit project evidence using:
 
-## Project Structure
+   - `submit_evidence(readme_url, source_code_url)`
+
+3. The contract stores the evidence and changes the status to:
 
 ```text
-AI-Milestone-Escrow/
-├── AI_Milestone_Escrow.py
-└── README.md
+SUBMITTED
