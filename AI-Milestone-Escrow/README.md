@@ -1,50 +1,66 @@
 # AI Milestone Escrow
 
-An AI-powered milestone escrow smart contract built on GenLayer.
+A milestone review smart contract built on GenLayer.
 
 ## Overview
 
-AI Milestone Escrow is a smart contract designed to manage milestone-based agreements between a client and a service provider.
+AI Milestone Escrow is a smart contract designed to manage
+milestone-based agreements and supporting evidence.
 
-The contract allows a client to define a milestone requirement and submit evidence when the milestone has been completed. The submitted evidence can then be evaluated using GenLayer's intelligent contract capabilities.
+The contract allows a client to define a milestone requirement
+when deploying the contract.
 
-Based on the evaluation result, the milestone can be accepted or rejected.
+Evidence can later be submitted by providing:
+
+- A README or project documentation URL
+- A source code URL
+
+The contract stores the submitted evidence on-chain and maintains
+the current milestone status.
 
 ## Features
 
-- Create a milestone agreement
 - Define a client name
-- Define milestone requirements
-- Submit evidence through a URL
-- Store submitted evidence
-- AI-powered milestone evaluation
-- Automatic decision recording
-- Store evaluation reasons
-- Track review status
-- Query milestone information
-- Query evidence URL
-- Query evaluation decision
-- Query evaluation reason
-- Check contract status
+- Define a milestone requirement
+- Submit README evidence URL
+- Submit source code evidence URL
+- Store milestone status
+- Approve the milestone
 
-## Contract Flow
+## Smart Contract
+
+The contract includes the following public methods:
+
+### Read Methods
+
+- `get_client_name()`
+- `get_milestone()`
+- `get_readme_url()`
+- `get_source_code_url()`
+- `get_status()`
+
+### Write Methods
+
+- `submit_evidence(readme_url, source_code_url)`
+- `approve()`
+
+## Workflow
+
+1. Deploy the contract with a client name and milestone requirement.
+2. Submit documentation and source code evidence.
+3. Review the submitted evidence.
+4. Approve the milestone.
+5. Check the current status.
+
+## Built With
+
+- Python
+- GenLayer
+- GenLayer Studio
+
+## Project Structure
 
 ```text
-Client creates milestone
-        |
-        v
-Milestone requirement is stored
-        |
-        v
-Evidence URL is submitted
-        |
-        v
-Evidence is evaluated
-        |
-        v
-AI evaluation produces a decision
-        |
-        +-------------------+
-        |                   |
-        v                   v
-     ACCEPTED            REJECTED
+AI-Milestone-Escrow/
+├── AI_Milestone_Escrow.py
+└── README.md
