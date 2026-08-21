@@ -4,12 +4,14 @@ from genlayer import *
 
 
 class MilestoneReviewer(gl.Contract):
+
     client_name: str
     milestone_requirement: str
     readme_url: str
     source_code_url: str
     status: str
     evaluation_reason: str
+
 
     def __init__(
         self,
@@ -23,19 +25,23 @@ class MilestoneReviewer(gl.Contract):
         self.status = "PENDING"
         self.evaluation_reason = ""
 
+
     @gl.public.write
     def submit_evidence(
         self,
         readme_url: str,
         source_code_url: str
     ) -> None:
+
         self.readme_url = readme_url
         self.source_code_url = source_code_url
         self.status = "SUBMITTED"
         self.evaluation_reason = ""
 
+
     @gl.public.write
     def review_evidence(self) -> None:
+
         if self.readme_url == "":
             raise gl.vm.UserError(
                 "No README evidence submitted"
@@ -50,7 +56,9 @@ class MilestoneReviewer(gl.Contract):
         source_code_url = self.source_code_url
         requirement = self.milestone_requirement
 
+
         def leader_fn():
+
             readme_response = gl.nondet.web.get(
                 readme_url
             )
@@ -58,16 +66,6 @@ class MilestoneReviewer(gl.Contract):
             source_response = gl.nondet.web.get(
                 source_code_url
             )
-
-            if readme_response.status_code >= 400:
-                raise gl.vm.UserError(
-                    "Could not fetch README"
-                )
-
-            if source_response.status_code >= 400:
-                raise gl.vm.UserError(
-                    "Could not fetch source code"
-                )
 
             readme_content = readme_response.body.decode(
                 "utf-8"
@@ -100,12 +98,16 @@ Return ONLY a JSON object with this structure:
 }}
 
 Rules:
+
 1. APPROVED only when the evidence reasonably demonstrates
 that the milestone requirement is satisfied.
+
 2. REJECTED when the evidence is missing, irrelevant,
 incomplete, inaccessible, or insufficient.
+
 3. Do not assume functionality that is not visible
 in the submitted evidence.
+
 4. The decision must be exactly APPROVED or REJECTED.
 """
 
@@ -114,7 +116,11 @@ in the submitted evidence.
                 response_format="json"
             )
 
-        def validator_fn(leader_result) -> bool:
+
+        def validator_fn(
+            leader_result
+        ) -> bool:
+
             if not isinstance(
                 leader_result,
                 gl.vm.Return
@@ -123,7 +129,10 @@ in the submitted evidence.
 
             leader_data = leader_result.calldata
 
-            if not isinstance(leader_data, dict):
+            if not isinstance(
+                leader_data,
+                dict
+            ):
                 return False
 
             decision = leader_data.get(
@@ -140,13 +149,19 @@ in the submitted evidence.
             ):
                 return False
 
-            if not isinstance(reason, str):
+            if not isinstance(
+                reason,
+                str
+            ):
                 return False
 
-            if len(reason.strip()) == 0:
+            if len(
+                reason.strip()
+            ) == 0:
                 return False
 
             return True
+
 
         result = gl.vm.run_nondet_unsafe(
             leader_fn,
@@ -156,25 +171,31 @@ in the submitted evidence.
         self.status = result["decision"]
         self.evaluation_reason = result["reason"]
 
+
     @gl.public.view
     def get_client_name(self) -> str:
         return self.client_name
+
 
     @gl.public.view
     def get_milestone(self) -> str:
         return self.milestone_requirement
 
+
     @gl.public.view
     def get_readme_url(self) -> str:
         return self.readme_url
+
 
     @gl.public.view
     def get_source_code_url(self) -> str:
         return self.source_code_url
 
+
     @gl.public.view
     def get_status(self) -> str:
         return self.status
+
 
     @gl.public.view
     def get_evaluation_reason(self) -> str:
