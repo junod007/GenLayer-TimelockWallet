@@ -1,30 +1,56 @@
 # AI Milestone Escrow
 
-An AI-powered milestone review smart contract built on GenLayer.
+An AI-powered milestone evidence review smart contract built on GenLayer.
 
-## Overview
+## Project Overview
 
-AI Milestone Escrow allows a client to define a project milestone requirement and submit evidence of completed work.
+AI Milestone Escrow is a smart contract that allows a client to define a project milestone requirement and submit evidence of completed work.
 
-The submitted evidence consists of:
+The contract uses GenLayer's nondeterministic AI execution to independently evaluate the submitted evidence.
 
-- A README/documentation URL
-- A source code URL
+## Milestone Requirement
 
-The contract fetches both pieces of evidence from the web and uses GenLayer's AI capabilities to evaluate whether the submitted project satisfies the defined milestone requirement.
+The milestone requirement is defined by the client when the contract is deployed.
 
-## Workflow
+Example:
 
-1. Deploy the `MilestoneReviewer` contract with:
+The submitted project must provide a working smart contract that reviews project evidence using AI and returns either APPROVED or REJECTED.
 
-   - Client name
-   - Milestone requirement
+## Evidence Submission
 
-2. Submit project evidence using:
+The contract accepts two pieces of evidence:
 
-   - `submit_evidence(readme_url, source_code_url)`
+1. A README or project documentation URL.
+2. A public source code URL.
 
-3. The contract stores the evidence and changes the status to:
+These URLs are submitted using the `submit_evidence` method.
+
+## AI Evidence Review
+
+The `review_evidence` method performs the following process:
+
+1. Checks that both README and source code evidence have been submitted.
+2. Fetches the README content from the submitted URL.
+3. Fetches the source code from the submitted URL.
+4. Provides the milestone requirement, documentation, and source code to an AI reviewer.
+5. Requires the AI reviewer to return a JSON result containing:
+   - `decision`
+   - `reason`
+6. Validates that the decision is exactly either `APPROVED` or `REJECTED`.
+7. Stores the final decision and evaluation reason on-chain.
+
+## Contract Workflow
+
+### 1. Deploy the Contract
+
+Deploy the `MilestoneReviewer` contract with:
+
+- Client name
+- Milestone requirement
+
+### 2. Submit Evidence
+
+Call:
 
 ```text
-SUBMITTED
+submit_evidence(readme_url, source_code_url)
