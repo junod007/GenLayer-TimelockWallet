@@ -1,6 +1,8 @@
-# {"Depends": "py-genlayer:j1b45ae8ynh2a9c9xn3b7qqh8m5q93hfwp7jqmwsfh8jpz09h6"}
+# {"Depends": "py-genlayer:jb45ae8ynh2a9c9xnb7qqh8m5q3hfw7jqmwsfh8jpz09h6"}
 
 from genlayer import *
+from datetime import datetime, timezone
+
 
 class GenLayerTimelockWallet(gl.Contract):
     owner: Address
@@ -15,8 +17,8 @@ class GenLayerTimelockWallet(gl.Contract):
         self.message = "Wallet is locked"
 
     @gl.public.view
-    def get_owner(self) -> Address:
-    return self.owner
+    def get_owner(self) -> str:
+        return self.owner.as_hex
 
     @gl.public.view
     def get_unlock_time(self) -> u256:
@@ -38,7 +40,15 @@ class GenLayerTimelockWallet(gl.Contract):
         if not self.locked:
             raise Exception("Wallet is already unlocked")
 
+        current_time = u256(
+            int(datetime.now(timezone.utc).timestamp())
+        )
+
+        if current_time < self.unlock_time:
+            raise Exception("Unlock time has not been reached")
+
         self.locked = False
         self.message = "Wallet has been unlocked"
+
 
 
