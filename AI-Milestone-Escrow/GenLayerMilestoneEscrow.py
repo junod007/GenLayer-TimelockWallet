@@ -4,7 +4,7 @@ from genlayer import *
 
 
 @gl.evm.contract_interface
-class Recipient:
+class _Recipient:
     class View:
         pass
 
@@ -38,6 +38,7 @@ class GenLayerMilestoneEscrow(gl.Contract):
     ):
         self.client = gl.message.sender_address
         self.provider = Address(provider_address)
+
         self.milestone_requirement = milestone_requirement
 
         self.readme_url = ""
@@ -54,12 +55,23 @@ class GenLayerMilestoneEscrow(gl.Contract):
         self.refunded = False
 
 
-    # ---------------------------------------------------------
-    # DEPOSIT / CUSTODY
-    # ---------------------------------------------------------
+    # ============================================================
+    # DEPOSIT
+    # ============================================================
 
     @gl.public.write.payable
     def deposit(self) -> None:
+
+        if gl.message.sender_address != self.client:
+            raise gl.vm.UserError(
+                "Only the client can deposit"
+            )
+
+        if self.locked_amount != u256(0):
+            raise gl.vm.UserError(
+                "Escrow is already funded"
+            )
+
         amount = gl.message.value
 
         if amount == u256(0):
@@ -67,19 +79,12 @@ class GenLayerMilestoneEscrow(gl.Contract):
                 "Deposit must be greater than zero"
             )
 
-        if self.reviewed:
-            raise gl.vm.UserError(
-                "Milestone has already been reviewed"
-            )
-
-        self.locked_amount = (
-            self.locked_amount + amount
-        )
+        self.locked_amount = amount
 
 
-    # ---------------------------------------------------------
+    # ============================================================
     # SUBMIT EVIDENCE
-    # ---------------------------------------------------------
+    # ============================================================
 
     @gl.public.write
     def submit_evidence(
@@ -88,71 +93,79 @@ class GenLayerMilestoneEscrow(gl.Contract):
         source_code_url: str
     ) -> None:
 
-        if gl.message.sender_address != self.client:
+        if gl.message.sender_address != self.provider:
             raise gl.vm.UserError(
-                "Only the client can submit evidence"
+                "Only the provider can submit evidence"
             )
 
         if self.locked_amount == u256(0):
             raise gl.vm.UserError(
-                "No funds are locked"
+                "Escrow has not been funded"
             )
 
-        if self.reviewed:
+        if self.released:
             raise gl.vm.UserError(
-                "Milestone has already been reviewed"
+                "Escrow already released"
+            )
+
+        if self.refunded:
+            raise gl.vm.UserError(
+                "Escrow already refunded"
             )
 
         if readme_url == "":
             raise gl.vm.UserError(
-                "README URL is required"
+                "README URL cannot be empty"
             )
 
         if source_code_url == "":
             raise gl.vm.UserError(
-                "Source code URL is required"
+                "Source code URL cannot be empty"
             )
 
         self.readme_url = readme_url
         self.source_code_url = source_code_url
 
         self.evidence_submitted = True
+        self.reviewed = False
+
         self.decision = "PENDING"
         self.evaluation_reason = ""
 
 
-    # ---------------------------------------------------------
-    # GENLAYER CONSENSUS REVIEW
-    # ---------------------------------------------------------
+    # ============================================================
+    # MILESTONE EVALUATION
+    # ============================================================
 
     @gl.public.write
     def evaluate_milestone(self) -> None:
 
-        if gl.message.sender_address != self.client:
-            raise gl.vm.UserError(
-                "Only the client can request evaluation"
-            )
-
         if self.locked_amount == u256(0):
             raise gl.vm.UserError(
-                "No funds are locked"
+                "Escrow has not been funded"
             )
 
         if not self.evidence_submitted:
             raise gl.vm.UserError(
-                "No milestone evidence submitted"
+                "No evidence submitted"
             )
 
-        if self.reviewed:
+        if self.released:
             raise gl.vm.UserError(
-                "Milestone has already been reviewed"
+                "Escrow already released"
+            )
+
+        if self.refunded:
+            raise gl.vm.UserError(
+                "Escrow already refunded"
             )
 
         readme_url = self.readme_url
         source_code_url = self.source_code_url
         requirement = self.milestone_requirement
 
-        def leader_fn():
+
+        def fetch_and_review():
 
             readme_response = gl.nondet.web.get(
                 readme_url
@@ -164,72 +177,73 @@ class GenLayerMilestoneEscrow(gl.Contract):
 
             if readme_response.status_code >= 400:
                 raise gl.vm.UserError(
-                    f"Could not fetch README: "
-                    f"{readme_response.status_code}"
+                    "Could not fetch README evidence"
                 )
 
             if source_response.status_code >= 400:
                 raise gl.vm.UserError(
-                    f"Could not fetch source code: "
-                    f"{source_response.status_code}"
+                    "Could not fetch source code evidence"
                 )
 
             readme_content = (
-                readme_response.body
-                .decode("utf-8")[:8000]
+                readme_response.body.decode("utf-8")[:10000]
             )
 
             source_content = (
-                source_response.body
-                .decode("utf-8")[:16000]
+                source_response.body.decode("utf-8")[:20000]
             )
 
             prompt = f"""
-You are an independent GenLayer milestone reviewer.
+You are an independent GenLayer milestone escrow reviewer.
+
+Your task is to determine whether the submitted project evidence
+satisfies the milestone requirement.
 
 MILESTONE REQUIREMENT:
 {requirement}
 
-PROJECT README:
+README / PROJECT DOCUMENTATION:
 {readme_content}
 
 SOURCE CODE:
 {source_content}
 
-The project uses this escrow contract to hold GEN
-until a milestone has been independently evaluated.
+Evaluate the evidence conservatively.
 
-Evaluate whether the submitted implementation
-actually satisfies the milestone requirement.
+The implementation should demonstrate:
 
-Check carefully:
-
-1. The milestone requirement is addressed.
-2. The submitted source code implements the claimed functionality.
-3. Persistent contract state is present where required.
+1. The milestone requirement is actually addressed.
+2. The source code implements the claimed functionality.
+3. The contract contains persistent state relevant to the milestone.
 4. Relevant public methods are implemented.
-5. GenLayer-specific functionality is genuinely present.
-6. The README claims are supported by the source code.
-7. The implementation provides a coherent milestone
-   workflow involving evidence, evaluation, and settlement.
+5. GenLayer-specific functionality is actually used.
+6. Native GEN escrow custody is implemented when required.
+7. The README claims are supported by the source code.
+8. The submitted source code represents a coherent working workflow.
 
-Do not approve based only on documentation claims.
+IMPORTANT:
 
-Return ONLY a JSON object in exactly this format:
+APPROVED only when the evidence reasonably demonstrates
+that the milestone requirement is satisfied.
+
+REJECTED when evidence is missing, inaccessible, irrelevant,
+incomplete, contradictory, or insufficient.
+
+Do not approve based only on README claims.
+
+Do not assume functionality that is not visible in the source code.
+
+Return ONLY this JSON structure:
 
 {{
     "decision": "APPROVED" or "REJECTED",
     "reason": "brief evidence-based explanation"
 }}
 
-Rules:
+The decision MUST be exactly one of:
 
-- APPROVED only when the evidence reasonably demonstrates
-  that the milestone requirement is satisfied.
-- REJECTED when evidence is missing, inaccessible,
-  incomplete, irrelevant, or insufficient.
-- The decision must be exactly APPROVED or REJECTED.
-- The reason must be a non-empty string.
+APPROVED
+REJECTED
 """
 
             result = gl.nondet.exec_prompt(
@@ -239,7 +253,7 @@ Rules:
 
             if not isinstance(result, dict):
                 raise gl.vm.UserError(
-                    "Invalid consensus response"
+                    "LLM returned invalid response"
                 )
 
             decision = result.get("decision")
@@ -250,17 +264,17 @@ Rules:
                 "REJECTED"
             ):
                 raise gl.vm.UserError(
-                    "Invalid consensus decision"
+                    "Invalid milestone decision"
                 )
 
             if not isinstance(reason, str):
                 raise gl.vm.UserError(
-                    "Invalid consensus reason"
+                    "Invalid evaluation reason"
                 )
 
             if len(reason.strip()) == 0:
                 raise gl.vm.UserError(
-                    "Empty consensus reason"
+                    "Empty evaluation reason"
                 )
 
             return {
@@ -269,10 +283,13 @@ Rules:
             }
 
 
-        def validator_fn(
-            leader_result
-        ) -> bool:
+        # ========================================================
+        # VALIDATOR
+        # ========================================================
 
+        def validator_fn(leader_result) -> bool:
+
+            # Leader must have returned successfully.
             if not isinstance(
                 leader_result,
                 gl.vm.Return
@@ -287,14 +304,15 @@ Rules:
             ):
                 return False
 
-            leader_decision = (
-                leader_data.get("decision")
+            leader_decision = leader_data.get(
+                "decision"
             )
 
-            leader_reason = (
-                leader_data.get("reason")
+            leader_reason = leader_data.get(
+                "reason"
             )
 
+            # Validate leader structure.
             if leader_decision not in (
                 "APPROVED",
                 "REJECTED"
@@ -312,11 +330,18 @@ Rules:
             ) == 0:
                 return False
 
-            # Independent validator evaluation
-            validator_result = leader_fn()
 
-            validator_decision = (
-                validator_result.get("decision")
+            # Independently reproduce the review.
+            try:
+
+                validator_result = fetch_and_review()
+
+            except Exception:
+                return False
+
+
+            validator_decision = validator_result.get(
+                "decision"
             )
 
             if validator_decision not in (
@@ -325,26 +350,48 @@ Rules:
             ):
                 return False
 
-            # Consensus is based on the stable decision.
+
+            # IMPORTANT:
+            #
+            # Do NOT compare the natural-language reason.
+            #
+            # LLM reasoning can legitimately differ between
+            # validators.
+            #
+            # Only compare the stable settlement decision.
+
             return (
                 validator_decision
                 == leader_decision
             )
 
 
+        # ========================================================
+        # GENLAYER CONSENSUS
+        # ========================================================
+
         result = gl.vm.run_nondet_unsafe(
-            leader_fn,
+            fetch_and_review,
             validator_fn
         )
+
+
+        if result["decision"] not in (
+            "APPROVED",
+            "REJECTED"
+        ):
+            raise gl.vm.UserError(
+                "Consensus returned invalid decision"
+            )
 
         self.decision = result["decision"]
         self.evaluation_reason = result["reason"]
         self.reviewed = True
 
 
-    # ---------------------------------------------------------
+    # ============================================================
     # SETTLEMENT
-    # ---------------------------------------------------------
+    # ============================================================
 
     @gl.public.write
     def settle(self) -> None:
@@ -356,47 +403,61 @@ Rules:
 
         if self.locked_amount == u256(0):
             raise gl.vm.UserError(
-                "No funds available for settlement"
+                "No funds locked"
             )
 
-        if self.released or self.refunded:
+        if self.released:
             raise gl.vm.UserError(
-                "Escrow has already been settled"
+                "Escrow already released"
             )
+
+        if self.refunded:
+            raise gl.vm.UserError(
+                "Escrow already refunded"
+            )
+
 
         amount = self.locked_amount
 
+
         if self.decision == "APPROVED":
 
-            Recipient(
+            # Mark state before emitting settlement.
+            self.released = True
+            self.locked_amount = u256(0)
+
+            _Recipient(
                 self.provider
             ).emit_transfer(
                 value=amount
             )
 
-            self.released = True
+            return
+
+
+        if self.decision == "REJECTED":
+
+            # Mark state before emitting refund.
+            self.refunded = True
             self.locked_amount = u256(0)
 
-        elif self.decision == "REJECTED":
-
-            Recipient(
+            _Recipient(
                 self.client
             ).emit_transfer(
                 value=amount
             )
 
-            self.refunded = True
-            self.locked_amount = u256(0)
-
-        else:
-            raise gl.vm.UserError(
-                "Invalid milestone decision"
-            )
+            return
 
 
-    # ---------------------------------------------------------
-    # VIEWS
-    # ---------------------------------------------------------
+        raise gl.vm.UserError(
+            "Milestone decision is not settled"
+        )
+
+
+    # ============================================================
+    # READ METHODS
+    # ============================================================
 
     @gl.public.view
     def get_client(self) -> str:
@@ -406,6 +467,16 @@ Rules:
     @gl.public.view
     def get_provider(self) -> str:
         return self.provider.as_hex
+
+
+    @gl.public.view
+    def get_contract_balance(self) -> u256:
+        return self.balance
+
+
+    @gl.public.view
+    def get_locked_amount(self) -> u256:
+        return self.locked_amount
 
 
     @gl.public.view
@@ -421,16 +492,6 @@ Rules:
     @gl.public.view
     def get_source_code_url(self) -> str:
         return self.source_code_url
-
-
-    @gl.public.view
-    def get_locked_amount(self) -> u256:
-        return self.locked_amount
-
-
-    @gl.public.view
-    def get_contract_balance(self) -> u256:
-        return self.balance
 
 
     @gl.public.view
