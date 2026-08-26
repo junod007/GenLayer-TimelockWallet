@@ -1,41 +1,70 @@
-# GenLayer Milestone Escrow
+# GenLayer AI Milestone Escrow V3
 
-A GenLayer-native milestone escrow smart contract that combines native GEN asset custody with GenLayer nondeterministic AI evaluation and consensus.
+A native GEN milestone escrow smart contract powered by GenLayer.
 
-## Project Overview
-
-GenLayer Milestone Escrow allows a client to lock native GEN in a smart contract for a project milestone.
-
-The contract creates a complete milestone workflow:
-
-1. The client deploys the escrow contract.
-2. The client deposits native GEN into the contract.
-3. The client submits project evidence.
-4. GenLayer retrieves the submitted evidence from the web.
-5. GenLayer AI evaluates the milestone requirement.
-6. GenLayer consensus validates the evaluation.
-7. The result is stored on-chain as `APPROVED` or `REJECTED`.
-8. The escrow provides a settlement path for the locked GEN.
-
-The purpose is to demonstrate a real GenLayer-specific workflow where external evidence and AI evaluation influence an on-chain escrow settlement.
+This contract combines:
+- Native GEN escrow custody
+- Milestone-based payments
+- Evidence submission
+- AI-assisted milestone evaluation
+- GenLayer nondeterministic web access
+- Validator-based consensus
+- Automatic settlement based on the final decision
 
 ---
 
-## Milestone Requirement
+## Overview
 
-The milestone requirement is defined when the contract is deployed.
+GenLayerMilestoneEscrowV3 is an escrow contract designed for milestone-based work.
 
-Example:
+A client deposits native GEN into the escrow contract.
 
-> A GenLayer-native milestone escrow must accept native GEN deposits, store project evidence, retrieve the evidence through GenLayer nondeterministic web access, evaluate the milestone using GenLayer AI execution and consensus, and provide a settlement path that releases GEN after approval or refunds GEN after rejection.
+The provider submits work and evidence through publicly accessible project documentation and source code.
+
+GenLayer validators independently evaluate the submitted evidence using AI and reach consensus on whether the milestone has been satisfied.
+
+The final decision is:
+
+- `APPROVED` → funds are released to the provider
+- `REJECTED` → funds are refunded to the client
+
+The contract stores the complete evaluation result and settlement state on-chain.
 
 ---
 
-## Participants
-
-### Client
-
-The client is automatically set to:
+## Workflow
 
 ```text
-gl.message.sender_address
+Client
+  |
+  | Deploy Contract
+  v
+GenLayerMilestoneEscrowV3
+  |
+  | Deposit native GEN
+  v
+Funds Locked
+  |
+  | Submit Evidence
+  v
+Evidence Available
+  |
+  | Evaluate Milestone
+  v
+GenLayer AI Review
+  |
+  |-- Web Evidence Retrieval
+  |-- README Review
+  |-- Source Code Review
+  |-- Independent Validator Review
+  |
+  v
+GenLayer Consensus
+  |
+  +----------------------+
+  |                      |
+APPROVED              REJECTED
+  |                      |
+  v                      v
+Provider              Client
+receives GEN         receives refund
