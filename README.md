@@ -92,3 +92,10 @@ This repository also contains other GenLayer smart contract experiments, includi
 
 - GenLayer Timelock Wallet
 - AI Milestone Escrow
+
+  ## Deployment
+
+- Network: GenLayer Testnet
+- Contract Address: `0xF54832F7A34F34F65b3cFb6385c30e1861BaCCD1`
+- Contract Name: EvidenceDeliveryEscrow
+- Deployment Status: Accepted
