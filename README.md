@@ -1,46 +1,94 @@
-# GenLayer Timelock Wallet
+# Evidence Delivery Escrow
 
-A simple time-locked wallet smart contract built on GenLayer.
+A smart contract built on GenLayer for managing escrow-style delivery verification using submitted evidence and AI-assisted review.
 
-The contract starts in a locked state and can only be unlocked by the wallet owner after the specified unlock time has been reached.
+## Overview
+
+Evidence Delivery Escrow allows a client to define a delivery requirement and an escrow amount for a provider.
+
+The provider submits evidence of completion through an evidence URL. The contract then uses GenLayer's non-deterministic execution and comparative consensus mechanism to review whether the submitted evidence reasonably satisfies the requirement.
 
 ## Features
 
-- Stores the wallet owner address
-- Stores a predefined unlock timestamp
-- Starts in a locked state
-- Allows anyone to check the wallet owner
-- Allows anyone to check the unlock time
-- Allows anyone to check whether the wallet is locked
-- Allows anyone to read the current wallet message
-- Only the wallet owner can unlock the wallet
-- Prevents unlocking before the specified unlock time
-- Updates the wallet status after a successful unlock
+- Stores client and provider information
+- Stores an escrow amount
+- Defines a delivery requirement
+- Allows the provider to submit evidence
+- Uses an evidence URL as proof of delivery
+- Reviews evidence using AI-assisted evaluation
+- Uses GenLayer comparative consensus
+- Approves or rejects submitted evidence
+- Allows the client to release payment after approval
+- Allows the client to request a refund
 
-## Smart Contract Functions
+## Contract Flow
 
-### Read Methods
+1. Deploy the contract with:
+   - Provider address
+   - Escrow amount
+   - Delivery requirement
 
-#### `get_owner()`
+2. The provider submits an evidence URL using:
 
-Returns the address of the wallet owner.
+   `submit_evidence(url)`
 
-#### `get_unlock_time()`
+3. The contract evaluates the submitted evidence using:
 
-Returns the timestamp when the wallet can be unlocked.
+   `review_evidence()`
 
-#### `is_locked()`
+4. The evidence is reviewed against the original requirement.
 
-Returns the current lock status.
+5. If approved, the client can call:
 
-- `true` → Wallet is locked
-- `false` → Wallet has been unlocked
+   `release_payment()`
 
-#### `get_message()`
+6. If the evidence is rejected or the escrow is not settled, the client can call:
 
-Returns the current wallet message.
+   `refund_client()`
 
-Initial message:
+## Read Methods
 
-```text
-Wallet is locked
+- `get_status()`
+- `get_evidence()`
+- `get_amount()`
+
+## Write Methods
+
+- `submit_evidence(url)`
+- `review_evidence()`
+- `release_payment()`
+- `refund_client()`
+
+## Contract States
+
+The contract can use the following states:
+
+- `pending`
+- `evidence_submitted`
+- `approved`
+- `rejected`
+- `refunded`
+
+## Evidence Review
+
+The contract uses GenLayer's:
+
+- `gl.nondet.exec_prompt`
+- `gl.eq_principle.prompt_comparative`
+
+The AI reviewer compares the submitted evidence against the original escrow requirement and returns an `approved` or `rejected` decision.
+
+## Source Code
+
+Main contract source:
+
+`EvidenceDeliveryEscrow.py`
+
+## Development
+
+Built and deployed using GenLayer Studio.
+
+This repository also contains other GenLayer smart contract experiments, including:
+
+- GenLayer Timelock Wallet
+- AI Milestone Escrow
