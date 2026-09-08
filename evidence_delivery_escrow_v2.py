@@ -58,7 +58,9 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
     @gl.public.view
     def get_contract_balance(self) -> u256:
         return self.balance
-
+    @gl.public.view
+    def get_status(self) -> str:
+        return self.decision
 
     @gl.public.write.payable
     def deposit(self) -> str:
@@ -112,7 +114,10 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
         evidence_url = self.evidence_url
 
         def evaluate():
-            response = gl.nondet.web.get(evidence_url)
+            response = gl.nondet.web.request(
+                 evidence_url,
+                 method="GET"
+                )
 
             if response.status_code >= 400:
                 raise Exception(
