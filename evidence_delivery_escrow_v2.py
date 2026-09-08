@@ -32,7 +32,6 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
     released: bool
     refunded: bool
 
-
     def __init__(
         self,
         provider: str,
@@ -54,10 +53,10 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
         self.released = False
         self.refunded = False
 
-
     @gl.public.view
     def get_contract_balance(self) -> u256:
         return self.balance
+
     @gl.public.view
     def get_status(self) -> str:
         return self.decision
@@ -74,7 +73,6 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
         self.decision = "deposited"
 
         return "Deposit received"
-
 
     @gl.public.write
     def submit_evidence(self, url: str) -> str:
@@ -98,7 +96,6 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
 
         return "Evidence submitted"
 
-
     @gl.public.write
     def review_evidence(self) -> str:
         if not self.deposited:
@@ -115,14 +112,9 @@ class EvidenceDeliveryEscrowV2(gl.Contract):
 
         def evaluate():
             response = gl.nondet.web.request(
-                 evidence_url,
-                 method="GET"
-                )
-
-            if response.status_code >= 400:
-                raise Exception(
-                    f"Evidence URL returned HTTP {response.status_code}"
-                )
+                evidence_url,
+                method="GET"
+            )
 
             evidence_content = response.body.decode("utf-8")
 
@@ -154,10 +146,13 @@ Return ONLY valid JSON in this exact format:
 }}
 """
 
-            result = gl.nondet.exec_prompt(prompt)
+            result = gl.nondet.exec_prompt(
+                prompt,
+                response_format="json"
+            )
 
             return json.dumps(
-                json.loads(result),
+                result,
                 sort_keys=True
             )
 
@@ -189,7 +184,6 @@ in the submitted evidence URL.
 
         return self.decision
 
-
     @gl.public.write
     def release_payment(self) -> str:
         if str(gl.message.sender_address).lower() != self.client.lower():
@@ -218,7 +212,6 @@ in the submitted evidence URL.
         self.decision = "released"
 
         return "Payment released"
-
 
     @gl.public.write
     def refund_client(self) -> str:
